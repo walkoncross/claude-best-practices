@@ -54,6 +54,7 @@ PROJECT_TYPE=""
 PROJECT_PATH=""
 INSTALL_GLOBAL=false
 LANG="zh"
+INTERACTIVE=false
 
 # 解析参数
 while [[ $# -gt 0 ]]; do
@@ -89,6 +90,107 @@ done
 # 获取脚本所在目录
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+
+# 交互式提示函数
+interactive_mode() {
+    echo "欢迎使用 Claude Code 配置工具（交互模式）"
+    echo "============================================"
+    echo ""
+
+    # 选择操作类型
+    echo "请选择操作类型:"
+    echo "  1) 安装全局配置"
+    echo "  2) 配置项目"
+    echo "  3) 退出"
+    echo ""
+    read -p "请输入选项 [1-3]: " operation_choice
+
+    case $operation_choice in
+        1)
+            INSTALL_GLOBAL=true
+            ;;
+        2)
+            # 项目配置
+            ;;
+        3)
+            echo "已取消操作"
+            exit 0
+            ;;
+        *)
+            print_error "无效选项"
+            exit 1
+            ;;
+    esac
+
+    # 选择语言
+    echo ""
+    echo "请选择语言:"
+    echo "  1) 中文 (zh)"
+    echo "  2) English (en)"
+    echo ""
+    read -p "请输入选项 [1-2]: " lang_choice
+
+    case $lang_choice in
+        1)
+            LANG="zh"
+            ;;
+        2)
+            LANG="en"
+            ;;
+        *)
+            print_error "无效选项，使用默认语言: zh"
+            LANG="zh"
+            ;;
+    esac
+
+    # 如果选择项目配置，询问项目信息
+    if [ "$operation_choice" = "2" ]; then
+        echo ""
+        read -p "请输入项目路径: " PROJECT_PATH
+
+        if [ -z "$PROJECT_PATH" ]; then
+            print_error "项目路径不能为空"
+            exit 1
+        fi
+
+        # 展开 ~ 路径
+        PROJECT_PATH="${PROJECT_PATH/#\~/$HOME}"
+
+        echo ""
+        echo "请选择项目类型:"
+        echo "  1) frontend (前端项目)"
+        echo "  2) backend (后端项目)"
+        echo "  3) fullstack (全栈项目)"
+        echo "  4) data-science (数据科学项目)"
+        echo "  5) 跳过（使用通用模板）"
+        echo ""
+        read -p "请输入选项 [1-5]: " type_choice
+
+        case $type_choice in
+            1)
+                PROJECT_TYPE="frontend"
+                ;;
+            2)
+                PROJECT_TYPE="backend"
+                ;;
+            3)
+                PROJECT_TYPE="fullstack"
+                ;;
+            4)
+                PROJECT_TYPE="data-science"
+                ;;
+            5)
+                PROJECT_TYPE=""
+                ;;
+            *)
+                print_error "无效选项，使用通用模板"
+                PROJECT_TYPE=""
+                ;;
+        esac
+    fi
+
+    echo ""
+}
 
 # 安装全局配置
 install_global_config() {
@@ -162,18 +264,17 @@ main() {
     echo "===================="
     echo ""
 
+    # 如果没有提供任何参数，进入交互模式
+    if [ "$INSTALL_GLOBAL" = false ] && [ -z "$PROJECT_PATH" ] && [ "$INTERACTIVE" = false ]; then
+        interactive_mode
+    fi
+
     if [ "$INSTALL_GLOBAL" = true ]; then
         install_global_config
     fi
 
     if [ -n "$PROJECT_PATH" ]; then
         install_project_config
-    fi
-
-    if [ "$INSTALL_GLOBAL" = false ] && [ -z "$PROJECT_PATH" ]; then
-        print_error "请指定 --global 或 --project"
-        show_help
-        exit 1
     fi
 
     echo ""
